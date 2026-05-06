@@ -14,6 +14,7 @@ const state = {
   columnSearch: "",
   viewSearch: "",
   draggedColumnKey: null,
+  loadedDataFields: new Set(),
   pendingChanges: {},
   configDirty: false,
   currentPage: 1,
@@ -791,9 +792,10 @@ function renderColumnsChecklist() {
     text.textContent = column.label;
     label.append(checkbox, text);
     checkbox.checked = state.selectedColumns.includes(column.key);
-    checkbox.addEventListener("change", () => {
+    checkbox.addEventListener("change", async () => {
       if (checkbox.checked) {
         state.selectedColumns = [...state.selectedColumns, column.key];
+        await ensureDataFields([column.key]);
       } else {
         state.selectedColumns = state.selectedColumns.filter((key) => key !== column.key);
       }
@@ -1344,7 +1346,47 @@ function updateDataSnapshot(result = {}) {
   if (Array.isArray(result.columns) && result.columns.length) state.config.columns = result.columns;
   state.initiatives = result.initiatives || [];
   state.lastDataUpdated = result.lastUpdated || "";
+  state.loadedDataFields = new Set(result.meta?.fields || []);
   state.fieldSettings = sanitizeFieldSettings(state.fieldSettings);
+}
+
+function getRequiredDataFields(extraFields = []) {
+  const fields = new Set([
+    "top:key_mvp",
+    "top:key_iniciativa",
+    "top:nombre_mvp",
+    "top:nombre_iniciativa",
+    "top:id_mvp",
+    "top:id_iniciativa",
+    "top:actualizado_en",
+    "top:url_mvp",
+    "top:url_mpv",
+    "top:url_iniciativa",
+    "top:ulr_iniciativa",
+    "top:ultimo_comentario_mvp",
+    "top:ultimo_comentario_iniciativa",
+    ...savedFilterFields.map((field) => field.key),
+    ...Object.values(state.config?.metricFields || {}),
+    ...state.selectedColumns,
+    ...state.views.flatMap((view) => view.columns || []),
+    ...extraFields
+  ]);
+
+  return Array.from(fields).filter(Boolean);
+}
+
+function buildFieldsQuery(fields = []) {
+  const uniqueFields = Array.from(new Set(fields.filter(Boolean)));
+  return uniqueFields.length ? `?fields=${encodeURIComponent(uniqueFields.join(","))}` : "";
+}
+
+async function ensureDataFields(fields = []) {
+  const missing = fields.filter((field) => field && !state.loadedDataFields.has(field));
+  if (!missing.length) return;
+  await loadInitiatives(missing);
+  renderSavedFilters();
+  renderColumnsChecklist();
+  renderFieldSettingsList();
 }
 
 function activateView(id) {
@@ -1378,6 +1420,8 @@ async function requestActivateView(id) {
     }
   }
 
+  const nextView = state.views.find((item) => item.id === id);
+  if (nextView) await ensureDataFields(nextView.columns || []);
   activateView(id);
 }
 
@@ -1463,8 +1507,8 @@ async function loadConfig() {
   state.config = await api("/api/config");
 }
 
-async function loadInitiatives() {
-  const result = await api("/api/initiatives");
+async function loadInitiatives(extraFields = []) {
+  const result = await api(`/api/initiatives${buildFieldsQuery(getRequiredDataFields(extraFields))}`);
   updateDataSnapshot(result);
 }
 
@@ -1512,7 +1556,7 @@ async function refreshData(options = {}) {
   els.loadingOverlay.classList.remove("hidden");
   startSoftLoadingProgress(14, 86);
   try {
-    const result = await api("/api/refresh", { method: "POST" });
+    const result = await api(`/api/refresh${buildFieldsQuery(getRequiredDataFields())}`, { method: "POST" });
     setLoadingMessage("Actualizando informacion", "Organizando los datos para mostrar la tabla...", 92);
     updateDataSnapshot(result);
     syncSelectedColumns();

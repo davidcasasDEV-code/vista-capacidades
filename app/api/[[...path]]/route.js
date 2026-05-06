@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { buildColumnDefinitions, config, metricFields, readonlyFields } = require("../../../src/config");
+const {
+  buildColumnDefinitions,
+  config,
+  defaultViewColumns,
+  getNestedValue,
+  isFieldEnvelope,
+  metricFields,
+  readonlyFields,
+  unwrapFieldValue
+} = require("../../../src/config");
 const { scanInitiatives, saveInitiativeChanges, refreshInitiatives } = require("../../../src/dataStore");
 const viewsStore = require("../../../src/viewsStore");
 const { exportViewAsExcelHtml } = require("../../../src/excelExport");
@@ -12,6 +21,113 @@ export const dynamic = "force-dynamic";
 
 function json(body, status = 200) {
   return NextResponse.json(body, { status });
+}
+
+const essentialFieldKeys = [
+  "top:key_mvp",
+  "top:key_iniciativa",
+  "top:nombre_mvp",
+  "top:nombre_iniciativa",
+  "top:id_mvp",
+  "top:id_iniciativa",
+  "top:actualizado_en",
+  "top:url_mvp",
+  "top:url_mpv",
+  "top:url_iniciativa",
+  "top:ulr_iniciativa",
+  "top:ultimo_comentario_mvp",
+  "top:ultimo_comentario_iniciativa"
+];
+
+function unique(values = []) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function parseRequestedFields(url, fallback = []) {
+  const raw = url.searchParams.get("fields") || "";
+  const requested = raw.split(",").map((field) => field.trim()).filter(Boolean);
+  return unique([...essentialFieldKeys, ...Object.values(metricFields), ...fallback, ...requested]);
+}
+
+function setNestedValue(target, pathSegments, value) {
+  if (!Array.isArray(pathSegments) || !pathSegments.length) return;
+  let cursor = target;
+  pathSegments.slice(0, -1).forEach((segment) => {
+    if (!cursor[segment] || typeof cursor[segment] !== "object" || Array.isArray(cursor[segment])) {
+      cursor[segment] = {};
+    }
+    cursor = cursor[segment];
+  });
+  cursor[pathSegments[pathSegments.length - 1]] = value;
+}
+
+function compactValue(value) {
+  if (isFieldEnvelope(value)) {
+    return {
+      valor: unwrapFieldValue(value)
+    };
+  }
+
+  if (Array.isArray(value)) return value;
+
+  if (value && typeof value === "object") {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  return value;
+}
+
+function copyPath(source, target, pathSegments) {
+  if (!Array.isArray(pathSegments) || !pathSegments.length) return;
+  const value = getNestedValue(source, pathSegments);
+  if (value === undefined) return;
+  setNestedValue(target, pathSegments, compactValue(value));
+}
+
+function getColumnCopyPath(item, column) {
+  if (column?.metaPath && isFieldEnvelope(getNestedValue(item, column.metaPath))) {
+    return column.metaPath;
+  }
+  return column?.path;
+}
+
+function compactInitiatives(items, columns, fieldKeys) {
+  const columnsByKey = new Map(columns.map((column) => [column.key, column]));
+  const requested = unique([...essentialFieldKeys, ...fieldKeys]);
+
+  return items.map((item) => {
+    const compact = {};
+
+    requested.forEach((fieldKey) => {
+      const column = columnsByKey.get(fieldKey);
+      if (!column) return;
+
+      copyPath(item, compact, getColumnCopyPath(item, column));
+      (column.linkPaths || []).forEach((path) => copyPath(item, compact, path));
+      if (column.linkPath) copyPath(item, compact, column.linkPath);
+    });
+
+    copyPath(item, compact, ["actualizado_en"]);
+    copyPath(item, compact, ["portal_actualizado_en"]);
+    copyPath(item, compact, ["parent_refs"]);
+    copyPath(item, compact, ["tiene_iniciativa_padre"]);
+    return compact;
+  });
+}
+
+function buildInitiativesResponse(items, url, fallbackFields = []) {
+  const columns = buildColumnDefinitions(items);
+  const fields = parseRequestedFields(url, fallbackFields);
+  return {
+    initiatives: compactInitiatives(items, columns, fields),
+    columns,
+    lastUpdated: getLatestUpdatedAt(items),
+    meta: {
+      compacted: true,
+      total: items.length,
+      fields
+    }
+  };
 }
 
 function getLatestUpdatedAt(items = []) {
@@ -70,11 +186,7 @@ async function handleApi(request, params) {
 
   if (method === "GET" && pathname === "/api/initiatives") {
     const initiatives = await scanInitiatives();
-    return json({
-      initiatives,
-      columns: buildColumnDefinitions(initiatives),
-      lastUpdated: getLatestUpdatedAt(initiatives)
-    });
+    return json(buildInitiativesResponse(initiatives, url, defaultViewColumns));
   }
 
   if (method === "POST" && pathname === "/api/refresh") {
@@ -85,14 +197,12 @@ async function handleApi(request, params) {
     const finishedAt = Date.now();
     return json({
       ...result,
+      ...buildInitiativesResponse(initiatives, url, defaultViewColumns),
       timings: {
         lambdaMs: lambdaFinishedAt - startedAt,
         dynamoScanMs: finishedAt - lambdaFinishedAt,
         totalMs: finishedAt - startedAt
-      },
-      initiatives,
-      columns: buildColumnDefinitions(initiatives),
-      lastUpdated: getLatestUpdatedAt(initiatives)
+      }
     });
   }
 
@@ -138,7 +248,7 @@ async function handleApi(request, params) {
         updatedRows: changeResult.updated.length,
         lambdaResults: changeResult.lambdaResults
       },
-      initiatives
+      ...buildInitiativesResponse(initiatives, url, view.columns)
     });
   }
 
