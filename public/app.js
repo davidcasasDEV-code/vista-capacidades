@@ -1067,6 +1067,32 @@ function createChoiceCell(item, column, values, options, multiple, readonly, pen
   const allOptions = multiple
     ? options
     : ["", ...options];
+  const optionNodes = [];
+
+  const search = document.createElement("input");
+  search.className = "cell-choice-search";
+  search.type = "search";
+  search.placeholder = "Buscar opcion";
+  search.autocomplete = "off";
+  search.addEventListener("click", (event) => event.stopPropagation());
+  search.addEventListener("keydown", (event) => event.stopPropagation());
+
+  const empty = document.createElement("div");
+  empty.className = "cell-choice-empty hidden";
+  empty.textContent = "Sin coincidencias.";
+
+  search.addEventListener("input", () => {
+    const query = normalizeText(search.value);
+    let visibleOptions = 0;
+    optionNodes.forEach(({ node, label }) => {
+      const visible = !query || normalizeText(label).includes(query);
+      node.classList.toggle("hidden", !visible);
+      if (visible) visibleOptions += 1;
+    });
+    empty.classList.toggle("hidden", visibleOptions > 0);
+  });
+
+  menu.append(search);
 
   allOptions.forEach((optionValue) => {
     const option = document.createElement("button");
@@ -1086,6 +1112,7 @@ function createChoiceCell(item, column, values, options, multiple, readonly, pen
     const label = document.createElement("span");
     label.textContent = optionValue || "Sin dato";
     option.append(label);
+    optionNodes.push({ node: option, label: label.textContent });
 
     option.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1100,6 +1127,7 @@ function createChoiceCell(item, column, values, options, multiple, readonly, pen
     });
     menu.append(option);
   });
+  menu.append(empty);
 
   trigger.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1107,6 +1135,12 @@ function createChoiceCell(item, column, values, options, multiple, readonly, pen
       if (node !== menu) node.classList.add("hidden");
     });
     menu.classList.toggle("hidden");
+    if (!menu.classList.contains("hidden")) {
+      search.value = "";
+      optionNodes.forEach(({ node }) => node.classList.remove("hidden"));
+      empty.classList.add("hidden");
+      window.setTimeout(() => search.focus(), 0);
+    }
   });
   menu.addEventListener("click", (event) => event.stopPropagation());
   wrapper.append(menu);
