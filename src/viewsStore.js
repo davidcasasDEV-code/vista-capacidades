@@ -1,4 +1,5 @@
 const fs = require("node:fs/promises");
+const path = require("node:path");
 const crypto = require("node:crypto");
 const { config, defaultViewColumns, isKnownColumnKey } = require("./config");
 const { createClients } = require("./awsClients");
@@ -58,6 +59,7 @@ async function readViews() {
 }
 
 async function writeViews(views) {
+  await fs.mkdir(path.dirname(config.viewsPath), { recursive: true });
   await fs.writeFile(config.viewsPath, JSON.stringify(views, null, 2), "utf8");
 }
 

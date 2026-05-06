@@ -13,9 +13,18 @@ function listFromEnv(name, fallback) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
+function defaultDataMode() {
+  if (process.env.DATA_MODE) return process.env.DATA_MODE;
+  if (process.env.NODE_ENV === "production" || process.env.AWS_BRANCH || process.env.AMPLIFY_APP_ID) return "aws";
+  return "mock";
+}
+
+const projectRoot = process.cwd();
+const dataDir = readEnv("LOCAL_DATA_DIR", path.join(projectRoot, "data"));
+
 const config = {
   port: Number(readEnv("PORT", "3000")),
-  dataMode: readEnv("DATA_MODE", "mock").toLowerCase(),
+  dataMode: defaultDataMode().toLowerCase(),
   awsRegion: readEnv("APP_REGION", "us-east-1"),
   appAccessKeyId: readEnv("APP_ACCESS_KEY_ID", ""),
   appSecretAccessKey: readEnv("APP_SECRET_ACCESS_KEY", ""),
@@ -26,10 +35,10 @@ const config = {
   viewsDynamoPrimaryKey: readEnv("VIEWS_DYNAMODB_PRIMARY_KEY", "id"),
   refreshLambdaName: readEnv("REFRESH_LAMBDA_NAME", "Reporte_Vista_Capacidad"),
   backendLambdaName: readEnv("BACKEND_LAMBDA_NAME", "Backend_Vista_Capacidad"),
-  dataDir: path.join(__dirname, "..", "data"),
-  mockDataPath: path.join(__dirname, "..", "data", "initiatives.mock.json"),
-  localDataPath: path.join(__dirname, "..", "data", "initiatives.local.json"),
-  viewsPath: path.join(__dirname, "..", "data", "views.json")
+  dataDir,
+  mockDataPath: path.join(dataDir, "initiatives.mock.json"),
+  localDataPath: path.join(dataDir, "initiatives.local.json"),
+  viewsPath: path.join(dataDir, "views.json")
 };
 
 // ===== Configuracion manual de campos =====

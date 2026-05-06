@@ -1,4 +1,5 @@
 const fs = require("node:fs/promises");
+const path = require("node:path");
 const { config, getColumnDefinition, setNestedValue } = require("./config");
 const { createClients } = require("./awsClients");
 
@@ -9,6 +10,7 @@ async function ensureLocalDataFile() {
     await fs.access(config.localDataPath);
   } catch {
     const seed = await fs.readFile(config.mockDataPath, "utf8");
+    await fs.mkdir(path.dirname(config.localDataPath), { recursive: true });
     await fs.writeFile(config.localDataPath, seed, "utf8");
   }
 }
@@ -20,6 +22,7 @@ async function readLocalInitiatives() {
 }
 
 async function writeLocalInitiatives(items) {
+  await fs.mkdir(path.dirname(config.localDataPath), { recursive: true });
   await fs.writeFile(config.localDataPath, JSON.stringify(items, null, 2), "utf8");
 }
 
