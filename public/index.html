@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vista Capacidades</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="chartTooltip" class="chart-tooltip hidden"></div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden" aria-live="polite">
+    <div class="loader"></div>
+    <strong>Actualizando información</strong>
+    <span>Preparando la informacion de la vista...</span>
+    <div class="loading-progress" aria-hidden="true">
+      <div id="loadingProgressBar" class="loading-progress-bar"></div>
+    </div>
+    <span id="loadingPercent" class="loading-percent">0%</span>
+  </div>
+
+  <div id="chartModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="chartModalTitle">
+    <section class="chart-modal">
+      <div class="modal-header">
+        <h2 id="chartModalTitle">Gráfica</h2>
+        <button id="closeChartModal" class="icon-button" type="button" title="Cerrar">×</button>
+      </div>
+      <div id="chartModalBody" class="modal-chart-body"></div>
+    </section>
+  </div>
+
+  <div id="textModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="textModalTitle">
+    <section class="text-modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="textModalTitle">Detalle</h2>
+          <span id="textModalMeta" class="modal-meta"></span>
+        </div>
+        <button id="closeTextModal" class="icon-button" type="button" title="Cerrar">x</button>
+      </div>
+      <div class="text-modal-body">
+        <textarea id="textModalValue" class="text-modal-value"></textarea>
+        <div id="commentComposer" class="comment-composer hidden">
+          <label for="commentTarget">Agregar como ultimo comentario</label>
+          <div class="comment-row">
+            <select id="commentTarget" class="saved-filter">
+              <option value="mvp">MVP</option>
+              <option value="iniciativa">Iniciativa</option>
+            </select>
+            <button id="stageCommentButton" class="button primary" type="button">Preparar comentario</button>
+          </div>
+          <textarea id="newCommentValue" class="text-modal-value comment-value" placeholder="Escribe el nuevo comentario"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="openCommentComposer" class="button" type="button">Nuevo comentario</button>
+        <button id="saveTextModal" class="button primary" type="button">Preparar cambio</button>
+      </div>
+    </section>
+  </div>
+
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Gestión de información</p>
+      <h1>Vista Capacidades y Demanda</h1>
+    </div>
+    <div class="header-actions">
+      <button id="fieldSettingsButton" class="icon-button" type="button" title="Configuración de campos">&#9881;</button>
+      <button id="refreshButton" class="button primary" type="button">Actualizar info</button>
+      <button id="exportButton" class="button" type="button">Descargar Excel</button>
+    </div>
+  </header>
+
+  <div id="fieldSettingsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fieldSettingsTitle">
+    <section class="settings-modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="fieldSettingsTitle">Configuración de campos</h2>
+          <span class="modal-meta">Aplica para todas las vistas</span>
+        </div>
+        <button id="closeFieldSettingsModal" class="icon-button" type="button" title="Cerrar">x</button>
+      </div>
+      <div class="settings-modal-body">
+        <input id="fieldSettingsSearch" class="column-search" type="search" placeholder="Buscar campo">
+        <div id="fieldSettingsList" class="field-settings-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveFieldSettingsButton" class="button primary" type="button">Guardar configuración</button>
+      </div>
+    </section>
+  </div>
+
+  <main class="layout">
+    <section class="metrics-grid" aria-label="Indicadores">
+      <article class="metric-tile total-tile">
+        <span>Total de datos</span>
+        <strong id="totalItems">0</strong>
+      </article>
+      <article class="metric-tile">
+        <div class="metric-header">
+          <span>SRE</span>
+          <button class="icon-button expand-chart-button" type="button" title="Expandir gráfica" data-chart="sre">↗</button>
+        </div>
+        <div id="sreChart" class="bar-chart"></div>
+      </article>
+      <article class="metric-tile">
+        <div class="metric-header">
+          <span>Champions</span>
+          <button class="icon-button expand-chart-button" type="button" title="Expandir gráfica" data-chart="champion">↗</button>
+        </div>
+        <div id="championChart" class="bar-chart"></div>
+      </article>
+      <article class="metric-tile">
+        <div class="metric-header">
+          <span>Estatus MVP</span>
+          <button class="icon-button expand-chart-button" type="button" title="Expandir gráfica" data-chart="mvpStatus">↗</button>
+        </div>
+        <div class="donut-wrap">
+          <div id="mvpDonut" class="donut"></div>
+          <div id="mvpLegend" class="legend"></div>
+        </div>
+      </article>
+      <article class="metric-tile">
+        <div class="metric-header">
+          <span>Estatus Iniciativa</span>
+          <button class="icon-button expand-chart-button" type="button" title="Expandir gráfica" data-chart="initiativeStatus">↗</button>
+        </div>
+        <div class="donut-wrap">
+          <div id="initiativeDonut" class="donut"></div>
+          <div id="initiativeLegend" class="legend"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="workspace-shell">
+      <aside class="views-panel">
+        <div class="panel-title-row">
+          <h2>Vistas</h2>
+          <div class="panel-actions">
+            <button id="toggleViewsButton" class="icon-button" type="button" title="Ocultar vistas">‹</button>
+            <button id="newViewButton" class="icon-button" type="button" title="Crear vista">+</button>
+          </div>
+        </div>
+        <div class="views-filter-wrap">
+          <input id="viewsSearch" class="views-search" type="search" placeholder="Filtrar vistas">
+        </div>
+        <div id="viewsList" class="views-list"></div>
+      </aside>
+
+      <section class="sheet-area">
+        <div class="sheet-toolbar">
+          <div class="view-name-group">
+            <label for="viewName">Nombre de vista</label>
+            <input id="viewName" type="text" placeholder="Nombre para guardar">
+          </div>
+          <button id="columnsButton" class="button" type="button">Columnas</button>
+          <button id="saveViewButton" class="button primary" type="button">Guardar vista</button>
+          <button id="deleteViewButton" class="button danger" type="button">Eliminar vista</button>
+          <span id="saveState" class="save-state"></span>
+        </div>
+
+        <div id="columnsPopover" class="columns-popover hidden">
+          <div class="popover-header">
+            <strong>Columnas disponibles</strong>
+            <button id="closeColumnsButton" class="icon-button" type="button" title="Cerrar">×</button>
+          </div>
+          <div class="column-search-wrap">
+            <input id="columnsSearch" class="column-search" type="search" placeholder="Buscar columna">
+          </div>
+          <div id="columnsChecklist" class="columns-checklist"></div>
+        </div>
+
+        <div class="table-controls table-controls-top">
+          <div class="saved-filters" aria-label="Filtros guardados de la vista">
+            <label class="saved-filter-group">
+              <span>SRE asignado</span>
+              <div id="topFilterSre" class="multi-filter"></div>
+            </label>
+            <label class="saved-filter-group">
+              <span>Champions</span>
+              <div id="topFilterChampion" class="multi-filter"></div>
+            </label>
+            <label class="saved-filter-group">
+              <span>Estatus de MVP</span>
+              <div id="topFilterMvpStatus" class="multi-filter"></div>
+            </label>
+            <button id="clearSavedFilters" class="button" type="button">Limpiar filtros</button>
+          </div>
+          <div id="topPagination" class="pagination-controls"></div>
+        </div>
+
+        <div id="topScroll" class="top-scroll" aria-hidden="true">
+          <div id="topScrollContent" class="top-scroll-content"></div>
+        </div>
+
+        <div id="sheetWrapper" class="sheet-wrapper">
+          <table id="dataTable" class="data-table" aria-label="Tabla de iniciativas"></table>
+        </div>
+
+        <div class="table-controls table-controls-bottom">
+          <div id="bottomPagination" class="pagination-controls"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <template id="barTemplate">
+    <div class="bar-row">
+      <span class="bar-label"></span>
+      <div class="bar-track"><div class="bar-fill"></div></div>
+      <strong class="bar-value"></strong>
+    </div>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>

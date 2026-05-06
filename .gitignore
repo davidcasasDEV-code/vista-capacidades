@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+.env*.local
+data/initiatives.local.json
+data/views.json
+next-dev*.log
+.DS_Store

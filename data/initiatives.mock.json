@@ -1,0 +1,120 @@
+[
+  {
+    "key_mvp": "DEMO-1002",
+    "actualizado_en": "2026-05-06T12:00:00.000Z",
+    "id_iniciativa": "1001",
+    "id_mvp": "1002",
+    "key_iniciativa": "DEMO-1001",
+    "nombre_iniciativa": "Iniciativa demo de capacidad",
+    "nombre_mvp": "MVP demo de operacion",
+    "parent_refs": ["1001", "DEMO-1001"],
+    "tiene_iniciativa_padre": true,
+    "url_iniciativa": "https://jira.example.com/browse/DEMO-1001",
+    "url_mvp": "https://jira.example.com/browse/DEMO-1002",
+    "ultimo_comentario_mvp": {
+      "actualizado_en": "2026-05-06 12:00",
+      "autor": "Usuario demo",
+      "comentario": "Comentario de seguimiento para validar lectura y nuevo comentario.",
+      "creado_en": "2026-05-06 12:00",
+      "id_comentario": "demo-comment-1"
+    },
+    "campos_mvp": {
+      "Resumen": {
+        "id": "summary",
+        "tipo_dato": "string",
+        "valor": "MVP demo de operacion"
+      },
+      "Estado": {
+        "id": "status",
+        "tipo_dato": "status",
+        "valor": "No Iniciado"
+      },
+      "Champions": {
+        "id": "customfield_demo_champions",
+        "tipo_dato": "array",
+        "opciones": ["Champion Demo 1", "Champion Demo 2"],
+        "valor": "Champion Demo 1 | Champion Demo 2"
+      },
+      "SRE asignado": {
+        "id": "customfield_demo_sre",
+        "tipo_dato": "option",
+        "opciones": ["SRE Demo 1", "SRE Demo 2"],
+        "valor": "SRE Demo 1"
+      },
+      "Equipo": {
+        "id": "customfield_demo_equipo",
+        "tipo_dato": "array",
+        "opciones": ["Equipo A", "Equipo B"],
+        "valor": "Equipo A"
+      },
+      "Fecha inicio MVP": {
+        "id": "customfield_demo_fecha_inicio",
+        "tipo_dato": "date",
+        "valor": "2026-05-06"
+      },
+      "Fecha Fin planeada MVP": {
+        "id": "customfield_demo_fecha_fin",
+        "tipo_dato": "date",
+        "valor": "2026-06-15"
+      },
+      "Porcentaje SRE": {
+        "id": "customfield_demo_pct_sre",
+        "tipo_dato": "number",
+        "valor": 50
+      },
+      "Contacto (TPO)": {
+        "id": "customfield_demo_contacto",
+        "tipo_dato": "string",
+        "valor": "Contacto demo"
+      }
+    },
+    "iniciativa_padre": {
+      "actualizado_en": "2026-05-06T12:00:00.000Z",
+      "id_iniciativa": "1001",
+      "key_iniciativa": "DEMO-1001",
+      "nombre_iniciativa": "Iniciativa demo de capacidad",
+      "url_iniciativa": "https://jira.example.com/browse/DEMO-1001",
+      "ultimo_comentario_iniciativa": {
+        "actualizado_en": "2026-05-06 12:00",
+        "autor": "Usuario demo",
+        "comentario": "Comentario demo de iniciativa.",
+        "creado_en": "2026-05-06 12:00",
+        "id_comentario": "demo-comment-2"
+      },
+      "campos_iniciativa": {
+        "Resumen": {
+          "id": "summary",
+          "tipo_dato": "string",
+          "valor": "Iniciativa demo de capacidad"
+        },
+        "Estado": {
+          "id": "status",
+          "tipo_dato": "status",
+          "valor": "Planeacion"
+        },
+        "Portafolio": {
+          "id": "customfield_demo_portafolio",
+          "tipo_dato": "option",
+          "opciones": ["Portafolio A", "Portafolio B"],
+          "valor": "Portafolio A"
+        },
+        "Product Owner": {
+          "id": "customfield_demo_po",
+          "tipo_dato": "string",
+          "valor": "PO Demo"
+        },
+        "Avenida": {
+          "id": "customfield_demo_avenida",
+          "tipo_dato": "option",
+          "opciones": ["Avenida A", "Avenida B"],
+          "valor": "Avenida A"
+        },
+        "Folio:": {
+          "id": "customfield_demo_folio",
+          "tipo_dato": "string",
+          "valor": "FOLIO-DEMO"
+        }
+      }
+    }
+  }
+]
