@@ -17,7 +17,7 @@ Configura estas variables en Amplify > Hosting > Environment variables:
 
 ```env
 DATA_MODE=aws
-AWS_REGION=us-east-1
+APP_REGION=us-east-1
 DYNAMODB_TABLE_NAME=Data_Vista_Demanda_Capacidad
 DYNAMODB_PRIMARY_KEY=key_mvp
 VIEWS_DYNAMODB_TABLE_NAME=Vistas_Demanda_Capacidad
@@ -26,7 +26,7 @@ REFRESH_LAMBDA_NAME=Reporte_Vista_Capacidad
 BACKEND_LAMBDA_NAME=Backend_Vista_Capacidad
 ```
 
-Para credenciales AWS, lo más seguro es usar un Service Role de Amplify con permisos a DynamoDB/Lambda. Si necesitas usar access keys temporalmente, agrégalas como variables de entorno en Amplify, no dentro del ZIP.
+Para credenciales, lo más seguro es usar un Service Role de Amplify con permisos a DynamoDB/Lambda. Si necesitas usar access keys temporalmente, usa APP_ACCESS_KEY_ID, APP_SECRET_ACCESS_KEY y APP_SESSION_TOKEN. No uses variables con prefijo AWS_ porque Amplify las bloquea/reserva.
 
 ## Estructura
 

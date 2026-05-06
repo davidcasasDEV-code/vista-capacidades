@@ -15,7 +15,7 @@ Por defecto corre en `DATA_MODE=mock`, usando datos locales en `data/initiatives
 ## Configuracion AWS
 
 1. Copia `.env.example` a `.env`.
-2. Llena `AWS_REGION`, credenciales, `DYNAMODB_TABLE_NAME`, `DYNAMODB_PRIMARY_KEY`, `VIEWS_DYNAMODB_TABLE_NAME`, `REFRESH_LAMBDA_NAME` y `BACKEND_LAMBDA_NAME`.
+2. Llena `APP_REGION`, credenciales, `DYNAMODB_TABLE_NAME`, `DYNAMODB_PRIMARY_KEY`, `VIEWS_DYNAMODB_TABLE_NAME`, `REFRESH_LAMBDA_NAME` y `BACKEND_LAMBDA_NAME`.
 3. Instala dependencias opcionales:
 
 ```bash
