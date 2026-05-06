@@ -17,6 +17,7 @@ const state = {
   loadedDataFields: new Set(),
   pendingChanges: {},
   configDirty: false,
+  isSaving: false,
   currentPage: 1,
   pageSize: 20,
   activeTextModal: null,
@@ -40,6 +41,9 @@ const els = {
   loadingOverlay: document.querySelector("#loadingOverlay"),
   loadingProgressBar: document.querySelector("#loadingProgressBar"),
   loadingPercent: document.querySelector("#loadingPercent"),
+  portalNotification: document.querySelector("#portalNotification"),
+  portalNotificationTitle: document.querySelector("#portalNotificationTitle"),
+  portalNotificationMessage: document.querySelector("#portalNotificationMessage"),
   refreshButton: document.querySelector("#refreshButton"),
   exportButton: document.querySelector("#exportButton"),
   saveViewButton: document.querySelector("#saveViewButton"),
@@ -118,7 +122,10 @@ function api(path, options = {}) {
   }).then(async (response) => {
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || "Ocurrio un error en la peticion.");
+      const error = new Error(payload.error || `Ocurrio un error en la peticion. (${response.status})`);
+      error.status = response.status;
+      error.payload = payload;
+      throw error;
     }
     const payload = await response.json();
     return typeof payload === "string" ? JSON.parse(payload) : payload;
@@ -1297,6 +1304,50 @@ function setSaveState(message, isError = false) {
   }
 }
 
+function showPortalNotification(type, title, message, timeout = 6500) {
+  if (!els.portalNotification) return;
+  window.clearTimeout(showPortalNotification.timer);
+  els.portalNotification.className = `portal-notification ${type}`;
+  els.portalNotificationTitle.textContent = title;
+  els.portalNotificationMessage.textContent = message;
+  els.portalNotification.classList.remove("hidden");
+
+  showPortalNotification.timer = window.setTimeout(() => {
+    els.portalNotification.classList.add("hidden");
+  }, timeout);
+}
+
+function getPendingChangeCount() {
+  return Object.values(state.pendingChanges).reduce((total, fields) => {
+    return total + Object.keys(fields || {}).length;
+  }, 0);
+}
+
+function formatSaveError(error) {
+  const message = String(error?.message || "Ocurrio un error al guardar.");
+  if (error?.status === 413 || message.includes("413")) {
+    return "La respuesta fue demasiado grande. Notifica al administrador para revisar la carga de datos.";
+  }
+  if (message.toLowerCase().includes("credentials")) {
+    return "No fue posible conectar con AWS. Notifica al administrador para revisar credenciales o permisos.";
+  }
+  if (message.includes("Backend_Vista_Capacidad") || message.includes("JIRA")) {
+    return "No se pudieron guardar todos los cambios en JIRA o DynamoDB. Notifica al administrador del portal.";
+  }
+  return message;
+}
+
+function setSavingControls(disabled) {
+  state.isSaving = disabled;
+  [els.saveViewButton, els.deleteViewButton, els.newViewButton, els.refreshButton, els.exportButton, els.columnsButton].forEach((button) => {
+    if (button) button.disabled = disabled;
+  });
+  if (els.saveViewButton) {
+    if (!els.saveViewButton.dataset.originalText) els.saveViewButton.dataset.originalText = els.saveViewButton.textContent;
+    els.saveViewButton.textContent = disabled ? "Guardando..." : els.saveViewButton.dataset.originalText;
+  }
+}
+
 function formatLastUpdated(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -1414,7 +1465,8 @@ async function requestActivateView(id) {
   if (hasPendingChanges()) {
     const shouldSave = window.confirm("Hay cambios pendientes. ¿Quieres guardarlos antes de cambiar de vista?");
     if (shouldSave) {
-      await saveActiveView();
+      const saved = await saveActiveView();
+      if (!saved) return;
     } else {
       clearDraftState();
     }
@@ -1426,7 +1478,40 @@ async function requestActivateView(id) {
 }
 
 async function saveActiveView() {
-  await persistActiveView({ reactivate: true, message: "Vista guardada." });
+  if (state.isSaving) return false;
+  const pendingCount = getPendingChangeCount();
+  setSavingControls(true);
+  setLoadingMessage(
+    pendingCount ? "Guardando cambios" : "Guardando vista",
+    pendingCount
+      ? `Enviando ${pendingCount} cambio${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"}...`
+      : "Guardando la configuracion de la vista...",
+    10
+  );
+  els.loadingOverlay.classList.remove("hidden");
+  startSoftLoadingProgress(16, 88);
+
+  try {
+    const result = await persistActiveView({ reactivate: true });
+    stopSoftLoadingProgress(100);
+    const rows = result.savedChanges?.updatedRows || 0;
+    const message = pendingCount
+      ? `Se guardo la vista y se enviaron ${pendingCount} cambio${pendingCount === 1 ? "" : "s"} en ${rows} fila${rows === 1 ? "" : "s"}.`
+      : "La vista se guardo correctamente.";
+    setSaveState("Vista guardada.");
+    showPortalNotification("success", "Cambios guardados", message);
+    return true;
+  } catch (error) {
+    stopSoftLoadingProgress(100);
+    const message = formatSaveError(error);
+    console.error("Error al guardar vista", error);
+    setSaveState(message, true);
+    showPortalNotification("error", "No se pudieron guardar los cambios", message, 9000);
+    return false;
+  } finally {
+    els.loadingOverlay.classList.add("hidden");
+    setSavingControls(false);
+  }
 }
 
 async function persistActiveView({ reactivate = false, message = "" } = {}) {
@@ -1443,7 +1528,7 @@ async function persistActiveView({ reactivate = false, message = "" } = {}) {
     method: "POST",
     body: JSON.stringify(payload)
   });
-  if (result.initiatives) state.initiatives = result.initiatives;
+  if (result.initiatives) updateDataSnapshot(result);
   state.views = state.views.map((view) => (view.id === result.view.id ? result.view : view));
   state.activeView = result.view;
   clearDraftState();
@@ -1453,14 +1538,15 @@ async function persistActiveView({ reactivate = false, message = "" } = {}) {
     renderViews();
   }
   if (message) setSaveState(message);
-  return result.view;
+  return result;
 }
 
 async function createView() {
   if (hasPendingChanges()) {
     const shouldSave = window.confirm("Hay cambios pendientes. ¿Quieres guardarlos antes de crear otra vista?");
     if (shouldSave) {
-      await saveActiveView();
+      const saved = await saveActiveView();
+      if (!saved) return;
     } else {
       clearDraftState();
     }
@@ -1485,7 +1571,10 @@ async function deleteActiveView() {
   if (!state.activeViewId) return;
   if (hasPendingChanges()) {
     const shouldSave = window.confirm("Hay cambios pendientes. ¿Quieres guardarlos antes de eliminar la vista?");
-    if (shouldSave) await saveActiveView();
+    if (shouldSave) {
+      const saved = await saveActiveView();
+      if (!saved) return;
+    }
   }
   const viewName = els.viewName.value.trim() || "esta vista";
   const shouldDelete = window.confirm(`Eliminar "${viewName}"? Esta accion no elimina iniciativas, solo la vista guardada.`);
@@ -1546,7 +1635,8 @@ async function refreshData(options = {}) {
   if (!skipPrompt && hasPendingChanges()) {
     const shouldSave = window.confirm("Hay cambios pendientes. ¿Quieres guardarlos antes de actualizar la información?");
     if (shouldSave) {
-      await saveActiveView();
+      const saved = await saveActiveView();
+      if (!saved) return;
     } else {
       clearDraftState();
     }

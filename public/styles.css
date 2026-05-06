@@ -118,6 +118,13 @@ h2 {
   background: var(--primary-strong);
 }
 
+.button:disabled,
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
 .button.danger {
   color: var(--danger);
   border-color: #d7aaa5;
@@ -1110,6 +1117,41 @@ input[type="checkbox"].cell-value {
 .loading-percent {
   font-size: 13px;
   font-weight: 700;
+}
+
+.portal-notification {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 45;
+  width: min(390px, calc(100vw - 28px));
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 5px solid var(--primary);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.portal-notification strong {
+  font-size: 14px;
+}
+
+.portal-notification span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.portal-notification.success {
+  border-left-color: var(--primary);
+}
+
+.portal-notification.error {
+  border-left-color: var(--danger);
 }
 
 .chart-tooltip {
