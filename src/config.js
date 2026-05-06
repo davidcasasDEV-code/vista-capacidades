@@ -4,7 +4,8 @@ const { loadEnvFile } = require("./loadEnv");
 loadEnvFile();
 
 function readEnv(name, fallback = "") {
-  return process.env[name] || fallback;
+  if (process.env[name] === undefined) return fallback;
+  return String(process.env[name]).trim();
 }
 
 function listFromEnv(name, fallback) {
@@ -14,7 +15,7 @@ function listFromEnv(name, fallback) {
 }
 
 function defaultDataMode() {
-  if (process.env.DATA_MODE) return process.env.DATA_MODE;
+  if (process.env.DATA_MODE) return String(process.env.DATA_MODE).trim();
   if (process.env.NODE_ENV === "production" || process.env.AWS_BRANCH || process.env.AMPLIFY_APP_ID) return "aws";
   return "mock";
 }

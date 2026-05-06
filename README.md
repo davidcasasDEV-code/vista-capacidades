@@ -45,6 +45,8 @@ BACKEND_LAMBDA_NAME=Backend_Vista_Capacidad
 
 Recomendado: usar un Service Role de Amplify con permisos a DynamoDB y Lambda. Si necesitas access keys temporalmente, usa `APP_ACCESS_KEY_ID`, `APP_SECRET_ACCESS_KEY` y `APP_SESSION_TOKEN`. No subas `.env.local`.
 
+Nota para Next.js SSR en Amplify: las variables de la consola se exponen al build, pero no siempre al runtime de Next.js. Por eso `amplify.yml` copia las variables necesarias a `.env.production` antes de compilar. Evita usar access keys permanentes cuando puedas; es preferible un rol IAM con permisos minimos.
+
 ## Estructura
 
 - `app/page.js`: renderiza la UI existente desde `public/index.html`.

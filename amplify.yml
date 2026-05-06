@@ -7,6 +7,13 @@ frontend:
         - npm ci
     build:
       commands:
+        - >
+          for key in DATA_MODE APP_REGION DYNAMODB_TABLE_NAME DYNAMODB_PRIMARY_KEY
+          VIEWS_DYNAMODB_TABLE_NAME VIEWS_DYNAMODB_PRIMARY_KEY REFRESH_LAMBDA_NAME
+          BACKEND_LAMBDA_NAME APP_ACCESS_KEY_ID APP_SECRET_ACCESS_KEY APP_SESSION_TOKEN; do
+          value=$(printenv "$key" || true);
+          if [ -n "$value" ]; then printf "%s=%s\n" "$key" "$value" >> .env.production; fi;
+          done
         - npm run build
   artifacts:
     baseDirectory: .next
